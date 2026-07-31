@@ -1,7 +1,12 @@
 import cv2
 import numpy as np
-from fer import FER
 import streamlit as st
+
+# Safe import for fer detector
+try:
+    from fer import FER
+except ImportError:
+    from fer.fer import FER
 
 st.set_page_config(page_title="Facial Emotion Recognition", page_icon="🎭")
 
@@ -11,7 +16,11 @@ st.write(
 )
 
 # Initialize detector
-detector = FER(mtcnn=False)
+@st.cache_resource
+def load_detector():
+    return FER(mtcnn=False)
+
+detector = load_detector()
 
 img_file_buffer = st.camera_input("Take a photo")
 
@@ -23,7 +32,7 @@ if img_file_buffer is not None:
     )
 
     with st.spinner("Analyzing emotion..."):
-        # Detect emotions
+        # Detect top emotion
         result = detector.top_emotion(cv2_img)
 
         if result and result[0] is not None:

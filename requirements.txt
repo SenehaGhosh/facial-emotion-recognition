@@ -1,5 +1,4 @@
 streamlit
-deepface
-tf_keras
-tensorflow-cpu
+fer
 opencv-python-headless
+setuptools
