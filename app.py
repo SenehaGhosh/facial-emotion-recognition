@@ -1,5 +1,4 @@
 import os
-import urllib.request
 import cv2
 import numpy as np
 import streamlit as st
@@ -14,29 +13,14 @@ st.write(
 )
 
 
-# Reliable helper function to download files bypassing GitHub rate-limits
-def download_cascade(url, filename):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req) as response:
-        content = response.read()
-        # Verify valid XML was downloaded
-        if b"<?xml" in content or b"<opencv_storage>" in content:
-            with open(filename, "wb") as f:
-                f.write(content)
-            return True
-    return False
-
-
 @st.cache_resource
 def load_cascades():
-    face_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml"
-    smile_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_smile.xml"
+    # Load files directly from local directory
+    face_path = os.path.join(os.path.dirname(__file__), "face.xml")
+    smile_path = os.path.join(os.path.dirname(__file__), "smile.xml")
 
-    download_cascade(face_url, "face.xml")
-    download_cascade(smile_url, "smile.xml")
-
-    face_cascade = cv2.CascadeClassifier("face.xml")
-    smile_cascade = cv2.CascadeClassifier("smile.xml")
+    face_cascade = cv2.CascadeClassifier(face_path)
+    smile_cascade = cv2.CascadeClassifier(smile_path)
     return face_cascade, smile_cascade
 
 
@@ -82,4 +66,6 @@ if img_file_buffer is not None:
                 "No face detected clearly. Please align your face with direct lighting and try again."
             )
     else:
-        st.error("Cascade model failed to load. Please reboot the app.")
+        st.error(
+            "Cascade model failed to load. Ensure face.xml exists in the repo."
+        )
