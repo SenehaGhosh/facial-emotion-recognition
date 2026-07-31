@@ -1,8 +1,3 @@
-Here is the complete text for your **`README.md`** file.
-
-Copy everything in the box below and paste it directly into your `README.md` file in VS Code:
-
-```markdown
 # Real-Time Facial Emotion Recognition 🎭
 
 A real-time computer vision application built with Python, OpenCV, and DeepFace that detects human faces through a live webcam feed and analyzes facial expressions to classify dominant emotions instantly.
