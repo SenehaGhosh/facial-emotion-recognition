@@ -1,4 +1,4 @@
 streamlit
-fer
 opencv-python-headless
-setuptools
+tf-keras
+deepface
