@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+from mediapipe.python.solutions import face_mesh as mp_face_mesh
 import numpy as np
 import streamlit as st
 
@@ -9,9 +10,6 @@ st.title("🎭 Real-Time Facial Emotion Recognition")
 st.write(
     "Take a photo using your webcam to analyze facial expressions in real time!"
 )
-
-# Initialize MediaPipe Face Mesh
-mp_face_mesh = mp.solutions.face_mesh
 
 
 def detect_emotion(landmarks):
@@ -35,7 +33,7 @@ def detect_emotion(landmarks):
     right_brow_dist = np.linalg.norm(right_eyebrow - right_eye)
     brow_dist = (left_brow_dist + right_brow_dist) / 2.0
 
-    # Emotion classification heuristics
+    # Emotion classification rules
     if mouth_ratio > 0.4:
         return "SURPRISED / HAPPY", 92.5
     elif mouth_ratio > 0.18:
