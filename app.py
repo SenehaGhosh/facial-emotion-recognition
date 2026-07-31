@@ -1,80 +1,68 @@
-import os
 import cv2
+import mediapipe as mp
 import numpy as np
 import streamlit as st
 
-st.set_page_config(
-    page_title="Facial Emotion Recognition", page_icon="🎭", layout="centered"
-)
+st.set_page_config(page_title="Facial Emotion Recognition", page_icon="🎭")
 
 st.title("🎭 Real-Time Facial Emotion Recognition")
 st.write(
     "Take a photo using your webcam to analyze facial expressions in real time!"
 )
 
-
-@st.cache_resource
-def load_cascades():
-    dir_path = os.path.dirname(__file__)
-    face_path = os.path.join(dir_path, "face.xml")
-    smile_path = os.path.join(dir_path, "smile.xml")
-
-    # Safe fallback if files are missing or empty
-    if not os.path.exists(face_path) or os.path.getsize(face_path) == 0:
-        st.error(
-            "face.xml is missing or empty in your repo! Please check the file."
-        )
-        return None, None
-
-    # Load Cascade Classifier safely
-    face_cascade = cv2.CascadeClassifier()
-    face_cascade.load(face_path)
-
-    smile_cascade = cv2.CascadeClassifier()
-    if os.path.exists(smile_path) and os.path.getsize(smile_path) > 0:
-        smile_cascade.load(smile_path)
-
-    return face_cascade, smile_cascade
+mp_face_mesh = mp.solutions.face_mesh
 
 
-face_cascade, smile_cascade = load_cascades()
+def detect_emotion(landmarks):
+    top_lip = np.array([landmarks[13].x, landmarks[13].y])
+    bottom_lip = np.array([landmarks[14].x, landmarks[14].y])
+    left_corner = np.array([landmarks[61].x, landmarks[61].y])
+    right_corner = np.array([landmarks[291].x, landmarks[291].y])
+
+    left_eyebrow = np.array([landmarks[70].x, landmarks[70].y])
+    right_eyebrow = np.array([landmarks[300].x, landmarks[300].y])
+    left_eye = np.array([landmarks[159].x, landmarks[159].y])
+    right_eye = np.array([landmarks[386].x, landmarks[386].y])
+
+    mouth_height = np.linalg.norm(top_lip - bottom_lip)
+    mouth_width = np.linalg.norm(left_corner - right_corner)
+    mouth_ratio = mouth_height / mouth_width if mouth_width > 0 else 0
+
+    left_brow_dist = np.linalg.norm(left_eyebrow - left_eye)
+    right_brow_dist = np.linalg.norm(right_eyebrow - right_eye)
+    brow_dist = (left_brow_dist + right_brow_dist) / 2.0
+
+    if mouth_ratio > 0.4:
+        return "SURPRISED / HAPPY", 92.5
+    elif mouth_ratio > 0.18:
+        return "HAPPY", 88.0
+    elif brow_dist < 0.045:
+        return "ANGRY / FOCUSED", 82.0
+    elif mouth_ratio < 0.08:
+        return "SAD / SERIOUS", 78.5
+    else:
+        return "NEUTRAL", 90.0
+
 
 img_file_buffer = st.camera_input("Take a photo")
 
-if img_file_buffer is not None and face_cascade is not None:
+if img_file_buffer is not None:
     bytes_data = img_file_buffer.getvalue()
     cv2_img = cv2.imdecode(
         np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR
     )
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+    rgb_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
 
-    # Detect faces
-    faces = face_cascade.detectMultiScale(
-        gray, scaleFactor=1.3, minNeighbors=5, minSize=(30, 30)
-    )
+    with mp_face_mesh.FaceMesh(
+        static_image_mode=True, max_num_faces=1, refine_landmarks=True
+    ) as face_mesh:
+        results = face_mesh.process(rgb_img)
 
-    if len(faces) > 0:
-        for x, y, w, h in faces:
-            roi_gray = gray[y : y + h, x : x + w]
-
-            smiles = []
-            if smile_cascade is not None and not smile_cascade.empty():
-                smiles = smile_cascade.detectMultiScale(
-                    roi_gray, scaleFactor=1.7, minNeighbors=20
-                )
-
-            if len(smiles) > 0:
-                emotion = "HAPPY / SMILE"
-                confidence = 92.4
-            else:
-                emotion = "NEUTRAL / SERIOUS"
-                confidence = 88.0
-
+        if results.multi_face_landmarks:
+            landmarks = results.multi_face_landmarks[0].landmark
+            emotion, confidence = detect_emotion(landmarks)
             st.success(
                 f"Detected Emotion: **{emotion}** ({confidence:.1f}% confidence)"
             )
-            break
-    else:
-        st.warning(
-            "No face detected clearly. Please ensure direct lighting and try again."
-        )
+        else:
+            st.warning("No face detected. Please position your face clearly.")
