@@ -1,0 +1,4 @@
+streamlit
+deepface
+tf_keras
+opencv-python-headless
